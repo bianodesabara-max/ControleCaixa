@@ -32,7 +32,8 @@ fun TelaConferencia(dados: Dados, atualizar: ((Dados) -> Dados) -> Unit, avisar:
     val contado = CEDULAS_E_MOEDAS.indices.sumOf { i -> CEDULAS_E_MOEDAS[i].second * (quantidades[i].toLongOrNull() ?: 0L) }
     val sistema = calc.saldoAte(data ?: LocalDate.now())
     val diferenca = contado - sistema
-    val (textoSituacao, corSituacao) = situacao(diferenca)
+    val (textoSituacao, corSituacao) =
+        if (contado == 0L) "DIGITE A CONTAGEM" to Cinza else situacao(diferenca)
 
     Column(Modifier.fillMaxSize()) {
         Titulo("Conferência de Caixa")
@@ -103,7 +104,10 @@ fun TelaConferencia(dados: Dados, atualizar: ((Dados) -> Dados) -> Unit, avisar:
                             moeda(sistema), Verde,
                         )
                         HorizontalDivider()
-                        LinhaResultado("Diferença (contado – sistema)", moeda(diferenca), corSituacao)
+                        LinhaResultado(
+                            "Diferença (contado – sistema)",
+                            if (contado == 0L) "–" else moeda(diferenca), corSituacao,
+                        )
                         Spacer(Modifier.height(4.dp))
                         Box(
                             Modifier.fillMaxWidth().background(corSituacao.copy(alpha = 0.12f), MaterialTheme.shapes.medium)
@@ -118,6 +122,7 @@ fun TelaConferencia(dados: Dados, atualizar: ((Dados) -> Dados) -> Unit, avisar:
                         Spacer(Modifier.height(4.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
+                                enabled = contado > 0L,
                                 onClick = {
                                     if (data == null) {
                                         avisar("Digite uma data válida (dd/mm/aaaa).")

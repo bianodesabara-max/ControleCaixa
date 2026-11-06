@@ -20,7 +20,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 // Larguras relativas das colunas da tabela
-private const val C_DATA = 0.9f
+private val LARGURA_DATA = 104.dp
 private const val C_DESC = 2.2f
 private const val C_CAT = 2.0f
 private const val C_VALOR = 1.1f
@@ -117,7 +117,7 @@ fun TelaLancamentos(dados: Dados, atualizar: ((Dados) -> Dados) -> Unit, avisar:
             OutlinedTextField(
                 value = busca,
                 onValueChange = { busca = it },
-                placeholder = { Text("Buscar por descrição, categoria, responsável…") },
+                placeholder = { Text("Buscar lançamentos", maxLines = 1) },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 trailingIcon = {
                     if (busca.isNotEmpty()) IconButton(onClick = { busca = "" }) { Icon(Icons.Filled.Close, "Limpar") }
@@ -219,12 +219,12 @@ private fun CabecalhoLancamentos() {
         Modifier.fillMaxWidth().background(Color(0xFFE8ECF4)).padding(horizontal = 12.dp, vertical = 10.dp).padding(end = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Data", Modifier.weight(C_DATA), style = estilo, fontWeight = FontWeight.Bold, color = Azul)
+        Text("Data", Modifier.width(LARGURA_DATA), style = estilo, fontWeight = FontWeight.Bold, color = Azul)
         Text("Descrição", Modifier.weight(C_DESC), style = estilo, fontWeight = FontWeight.Bold, color = Azul)
         Text("Categoria", Modifier.weight(C_CAT), style = estilo, fontWeight = FontWeight.Bold, color = Azul)
-        Text("Entrada", Modifier.weight(C_VALOR), style = estilo, fontWeight = FontWeight.Bold, color = Azul, textAlign = TextAlign.End)
-        Text("Saída", Modifier.weight(C_VALOR), style = estilo, fontWeight = FontWeight.Bold, color = Azul, textAlign = TextAlign.End)
-        Text("Saldo", Modifier.weight(C_SALDO), style = estilo, fontWeight = FontWeight.Bold, color = Azul, textAlign = TextAlign.End)
+        Text("Entrada", Modifier.weight(C_VALOR).padding(start = 8.dp), style = estilo, fontWeight = FontWeight.Bold, color = Azul, textAlign = TextAlign.End)
+        Text("Saída", Modifier.weight(C_VALOR).padding(start = 8.dp), style = estilo, fontWeight = FontWeight.Bold, color = Azul, textAlign = TextAlign.End)
+        Text("Saldo", Modifier.weight(C_SALDO).padding(start = 8.dp), style = estilo, fontWeight = FontWeight.Bold, color = Azul, textAlign = TextAlign.End)
         Spacer(Modifier.width(16.dp))
         Text("Responsável", Modifier.weight(C_RESP), style = estilo, fontWeight = FontWeight.Bold, color = Azul)
         Spacer(Modifier.width(LARGURA_ACOES))
@@ -237,7 +237,7 @@ private fun LinhaLancamento(l: Lancamento, saldo: Long, onEditar: () -> Unit, on
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(dataBR(l.dataLocal), Modifier.weight(C_DATA))
+        Text(dataBR(l.dataLocal), Modifier.width(LARGURA_DATA), maxLines = 1, softWrap = false)
         Column(Modifier.weight(C_DESC).padding(end = 8.dp)) {
             Text(l.descricao, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (l.observacao.isNotBlank()) {
@@ -245,10 +245,10 @@ private fun LinhaLancamento(l: Lancamento, saldo: Long, onEditar: () -> Unit, on
             }
         }
         Text(l.categoria, Modifier.weight(C_CAT).padding(end = 8.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(if (l.entrada) moeda(l.centavos) else "", Modifier.weight(C_VALOR), color = Verde, textAlign = TextAlign.End)
-        Text(if (!l.entrada) moeda(l.centavos) else "", Modifier.weight(C_VALOR), color = Vermelho, textAlign = TextAlign.End)
+        Text(if (l.entrada) moeda(l.centavos) else "", Modifier.weight(C_VALOR).padding(start = 8.dp), color = Verde, textAlign = TextAlign.End)
+        Text(if (!l.entrada) moeda(l.centavos) else "", Modifier.weight(C_VALOR).padding(start = 8.dp), color = Vermelho, textAlign = TextAlign.End)
         Text(
-            moeda(saldo), Modifier.weight(C_SALDO), textAlign = TextAlign.End, fontWeight = FontWeight.SemiBold,
+            moeda(saldo), Modifier.weight(C_SALDO).padding(start = 8.dp), textAlign = TextAlign.End, fontWeight = FontWeight.SemiBold,
             color = if (saldo < 0) Vermelho else Color.Black,
         )
         Spacer(Modifier.width(16.dp))

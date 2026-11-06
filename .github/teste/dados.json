@@ -10,7 +10,7 @@
     {"id":6,"data":"2026-11-05","descricao":"Retirada para depósito","categoria":"Retirada / Sangria","entrada":false,"centavos":200000,"responsavel":"Maria"}
   ],
   "conferencias": [
-    {"id":1,"data":"2026-10-31","conferidoPor":"Maria","contadoCentavos":186210,"sistemaCentavos":186210}
+    {"id":1,"data":"2026-10-31","conferidoPor":"Maria","contadoCentavos":236210,"sistemaCentavos":236210}
   ],
   "ultimoResponsavel": "Maria"
 }
