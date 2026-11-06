@@ -1,0 +1,4 @@
+[SKIKO] warn: Fallback to next API
+org.jetbrains.skiko.RenderException: Cannot create Linux GL context
+celular: 60 40 400 860
+APP AINDA ABERTO

@@ -1,0 +1,77 @@
++ export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
++ DEBIAN_FRONTEND=noninteractive
++ NEEDRESTART_MODE=a
++ sudo rm -f /var/lib/man-db/auto-update
++ timeout 240 sudo -E apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-confold xvfb xdotool imagemagick
+sudo: preserving the entire environment is not supported, '-E' is ignored
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+
+Service restarts being deferred:
+ systemctl restart hosted-compute-agent.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
++ mkdir -p /home/runner/ControleCaixa capturas
++ cp .github/teste/dados.json /home/runner/ControleCaixa/dados.json
++ sleep 3
++ Xvfb :99 -screen 0 1400x900x24
++ export DISPLAY=:99
++ DISPLAY=:99
++ ./desktop/build/compose/binaries/main/app/ControleCaixa/bin/ControleCaixa
++ sleep 25
+++ timeout 20 xdotool search --name 'Controle de Caixa'
+++ head -1
++ WID=2097159
+++ timeout 20 xdotool getwindowgeometry --shell 2097159
++ eval WINDOW=2097159 X=60 Y=40 WIDTH=1280 HEIGHT=820 SCREEN=0
+++ WINDOW=2097159
+++ X=60
+++ Y=40
+++ WIDTH=1280
+++ HEIGHT=820
+++ SCREEN=0
++ timeout 20 import -window root capturas/w1-lancamentos.png
++ timeout 20 xdotool windowsize 2097159 400 860
++ sleep 4
+++ timeout 20 xdotool getwindowgeometry --shell 2097159
++ eval WINDOW=2097159 X=60 Y=40 WIDTH=400 HEIGHT=860 SCREEN=0
+++ WINDOW=2097159
+++ X=60
+++ Y=40
+++ WIDTH=400
+++ HEIGHT=860
+++ SCREEN=0
++ echo 'celular: 60 40 400 860'
++ timeout 20 import -window root -crop 400x860+60+40 capturas/c1-lancamentos.png
++ n=2
++ for par in "150 resumo" "250 conferencia" "350 categorias"
++ set -- 150 resumo
++ timeout 20 xdotool mousemove 210 860 click 1
++ sleep 3
++ timeout 20 import -window root -crop 400x860+60+40 capturas/c2-resumo.png
++ n=3
++ for par in "150 resumo" "250 conferencia" "350 categorias"
++ set -- 250 conferencia
++ timeout 20 xdotool mousemove 310 860 click 1
++ sleep 3
++ timeout 20 import -window root -crop 400x860+60+40 capturas/c3-conferencia.png
++ n=4
++ for par in "150 resumo" "250 conferencia" "350 categorias"
++ set -- 350 categorias
++ timeout 20 xdotool mousemove 410 860 click 1
++ sleep 3
++ timeout 20 import -window root -crop 400x860+60+40 capturas/c4-categorias.png
++ n=5
++ timeout 20 xdotool mousemove 110 860 click 1
++ sleep 2
++ timeout 20 xdotool mousemove 160 160 click 1
++ sleep 3
++ timeout 20 import -window root -crop 400x860+60+40 capturas/c5-nova-entrada.png
++ timeout 20 xdotool search --name 'Controle de Caixa'
++ echo 'APP AINDA ABERTO'
