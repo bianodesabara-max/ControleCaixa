@@ -9,6 +9,7 @@ permissions:
 jobs:
   telas:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -21,7 +22,10 @@ jobs:
       - name: Montar app
         run: gradle :desktop:createDistributable --no-daemon
       - name: Abrir app e capturar telas
+        timeout-minutes: 6
         run: |
+          set -x
+          exec 2>>capturas.log
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb xdotool imagemagick >/dev/null
           mkdir -p "$HOME/ControleCaixa" capturas
           cp .github/teste/dados.json "$HOME/ControleCaixa/dados.json"
@@ -29,28 +33,30 @@ jobs:
           export DISPLAY=:99
           ./desktop/build/compose/binaries/main/app/ControleCaixa/bin/ControleCaixa > capturas/saida.txt 2>&1 &
           sleep 25
-          WID=$(xdotool search --name "Controle de Caixa" | head -1)
-          eval $(xdotool getwindowgeometry --shell $WID)
-          import -window root capturas/w1-lancamentos.png
+          WID=$(timeout 20 xdotool search --name "Controle de Caixa" | head -1)
+          eval $(timeout 20 xdotool getwindowgeometry --shell $WID)
+          timeout 20 import -window root capturas/w1-lancamentos.png
           # Tamanho de celular (400 x 860)
-          xdotool windowsize $WID 400 860; sleep 4
-          eval $(xdotool getwindowgeometry --shell $WID)
+          timeout 20 xdotool windowsize $WID 400 860; sleep 4
+          eval $(timeout 20 xdotool getwindowgeometry --shell $WID)
           echo "celular: $X $Y $WIDTH $HEIGHT" >> capturas/saida.txt
-          import -window root -crop ${WIDTH}x${HEIGHT}+${X}+${Y} capturas/c1-lancamentos.png
+          timeout 20 import -window root -crop ${WIDTH}x${HEIGHT}+${X}+${Y} capturas/c1-lancamentos.png
           # barra inferior: 4 itens de 100px, ~40px acima da borda
           n=2
           for par in "150 resumo" "250 conferencia" "350 categorias"; do
             set -- $par
-            xdotool mousemove $((X + $1)) $((Y + HEIGHT - 40)) click 1; sleep 3
-            import -window root -crop ${WIDTH}x${HEIGHT}+${X}+${Y} capturas/c$n-$2.png
+            timeout 20 xdotool mousemove $((X + $1)) $((Y + HEIGHT - 40)) click 1; sleep 3
+            timeout 20 import -window root -crop ${WIDTH}x${HEIGHT}+${X}+${Y} capturas/c$n-$2.png
             n=$((n + 1))
           done
-          xdotool mousemove $((X + 50)) $((Y + HEIGHT - 40)) click 1; sleep 2
-          xdotool mousemove $((X + 100)) $((Y + 120)) click 1; sleep 3
-          import -window root -crop ${WIDTH}x${HEIGHT}+${X}+${Y} capturas/c5-nova-entrada.png
-          xdotool search --name "Controle de Caixa" >/dev/null && echo "APP AINDA ABERTO" >> capturas/saida.txt
+          timeout 20 xdotool mousemove $((X + 50)) $((Y + HEIGHT - 40)) click 1; sleep 2
+          timeout 20 xdotool mousemove $((X + 100)) $((Y + 120)) click 1; sleep 3
+          timeout 20 import -window root -crop ${WIDTH}x${HEIGHT}+${X}+${Y} capturas/c5-nova-entrada.png
+          timeout 20 xdotool search --name "Controle de Caixa" >/dev/null && echo "APP AINDA ABERTO" >> capturas/saida.txt
       - name: Publicar capturas
+        if: always()
         run: |
+          mkdir -p capturas; cp capturas.log capturas/ 2>/dev/null || true
           cd capturas
           git init -q -b capturas && git add -A
           git -c user.name=ci -c user.email=ci@example.com commit -qm capturas
