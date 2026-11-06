@@ -1,0 +1,16 @@
+{
+  "saldoInicialCentavos": 50000,
+  "dataSaldoInicial": "2026-10-01",
+  "lancamentos": [
+    {"id":1,"data":"2026-10-05","descricao":"Aluguel sala 2 – ref. outubro","categoria":"Aluguéis","entrada":true,"centavos":150000,"responsavel":"Maria"},
+    {"id":2,"data":"2026-10-10","descricao":"Mensalidade plano – João Silva","categoria":"Mensalidade do Plano de Saúde","entrada":true,"centavos":45000,"responsavel":"Maria"},
+    {"id":3,"data":"2026-10-15","descricao":"Material de escritório","categoria":"Despesas gerais","entrada":false,"centavos":8790,"responsavel":"Maria","observacao":"Papelaria Central"},
+    {"id":4,"data":"2026-11-03","descricao":"Aluguel sala 2 – ref. novembro","categoria":"Aluguéis","entrada":true,"centavos":150000,"responsavel":"Maria"},
+    {"id":5,"data":"2026-11-04","descricao":"Coparticipação consulta – Ana","categoria":"Valor da Coparticipação do Plano de Saúde","entrada":true,"centavos":3500,"responsavel":"Maria"},
+    {"id":6,"data":"2026-11-05","descricao":"Retirada para depósito","categoria":"Retirada / Sangria","entrada":false,"centavos":200000,"responsavel":"Maria"}
+  ],
+  "conferencias": [
+    {"id":1,"data":"2026-10-31","conferidoPor":"Maria","contadoCentavos":186210,"sistemaCentavos":186210}
+  ],
+  "ultimoResponsavel": "Maria"
+}
