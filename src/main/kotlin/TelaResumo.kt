@@ -1,0 +1,147 @@
+package caixa
+
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import java.time.LocalDate
+import java.time.YearMonth
+
+private class LinhaMes(val mes: YearMonth, val entradas: Long, val saidas: Long, val saldoFim: Long?) {
+    val resultado get() = entradas - saidas
+}
+
+@Composable
+fun TelaResumo(dados: Dados) {
+    var ano by remember { mutableStateOf(LocalDate.now().year) }
+    val calc = remember(dados) { Calculo(dados) }
+    val hoje = YearMonth.now()
+
+    val linhas = remember(dados, ano) {
+        (1..12).map { m ->
+            val ym = YearMonth.of(ano, m)
+            val doMes = calc.doMes(ym)
+            LinhaMes(
+                mes = ym,
+                entradas = doMes.filter { it.entrada }.sumOf { it.centavos },
+                saidas = doMes.filter { !it.entrada }.sumOf { it.centavos },
+                saldoFim = if (ym.isAfter(hoje) && doMes.isEmpty()) null else calc.saldoAte(ym.atEndOfMonth()),
+            )
+        }
+    }
+    val doAno = remember(dados, ano) { dados.lancamentos.filter { it.dataLocal.year == ano } }
+    val totalEntradas = linhas.sumOf { it.entradas }
+    val totalSaidas = linhas.sumOf { it.saidas }
+
+    Column(Modifier.fillMaxSize()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Titulo("Resumo Mensal")
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { ano-- }) { Icon(Icons.Filled.ChevronLeft, "Ano anterior", tint = Azul) }
+            Text("$ano", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Azul)
+            IconButton(onClick = { ano++ }) { Icon(Icons.Filled.ChevronRight, "Próximo ano", tint = Azul) }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CartaoValor("Entradas em $ano", moeda(totalEntradas), Verde, Modifier.weight(1f))
+            CartaoValor("Saídas em $ano", moeda(totalSaidas), Vermelho, Modifier.weight(1f))
+            CartaoValor(
+                "Resultado do ano", moeda(totalEntradas - totalSaidas),
+                if (totalEntradas - totalSaidas < 0) Vermelho else Azul, Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CartaoBranco(Modifier.weight(1.25f).fillMaxHeight()) {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    LinhaTabela(listOf("Mês", "Entradas", "Saídas", "Resultado", "Saldo no fim do mês"), cabecalho = true)
+                    linhas.forEach { l ->
+                        LinhaTabela(
+                            listOf(
+                                NOMES_MESES[l.mes.monthValue - 1],
+                                if (l.entradas != 0L) moeda(l.entradas) else "–",
+                                if (l.saidas != 0L) moeda(l.saidas) else "–",
+                                if (l.entradas != 0L || l.saidas != 0L) moeda(l.resultado) else "–",
+                                l.saldoFim?.let { moeda(it) } ?: "",
+                            ),
+                            cores = listOf(
+                                Color.Black, Verde, Vermelho,
+                                if (l.resultado < 0) Vermelho else Color.Black,
+                                if ((l.saldoFim ?: 0L) < 0L) Vermelho else Color.Black,
+                            ),
+                            destaque = l.mes == hoje,
+                        )
+                        HorizontalDivider(color = Color(0xFFEEEEEE))
+                    }
+                    LinhaTabela(
+                        listOf("Total do ano", moeda(totalEntradas), moeda(totalSaidas), moeda(totalEntradas - totalSaidas), ""),
+                        cores = listOf(Azul, Verde, Vermelho, Azul, Azul),
+                        negrito = true,
+                    )
+                }
+            }
+            CartaoBranco(Modifier.weight(1f).fillMaxHeight()) {
+                Column(Modifier.verticalScroll(rememberScrollState()).padding(bottom = 12.dp)) {
+                    TotaisPorCategoria("Entradas por categoria", dados.categoriasEntrada, doAno.filter { it.entrada }, Verde)
+                    Spacer(Modifier.height(12.dp))
+                    TotaisPorCategoria("Saídas por categoria", dados.categoriasSaida, doAno.filter { !it.entrada }, Vermelho)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TotaisPorCategoria(titulo: String, categorias: List<String>, lancamentos: List<Lancamento>, cor: Color) {
+    val nomes = (categorias + lancamentos.map { it.categoria }).distinct()
+    LinhaTabela(listOf(titulo, "Total no ano"), cabecalho = true, pesos = listOf(2.2f, 1f))
+    nomes.forEach { c ->
+        val total = lancamentos.filter { it.categoria == c }.sumOf { it.centavos }
+        LinhaTabela(
+            listOf(c, if (total != 0L) moeda(total) else "–"),
+            cores = listOf(Color.Black, if (total != 0L) cor else Cinza),
+            pesos = listOf(2.2f, 1f),
+        )
+        HorizontalDivider(color = Color(0xFFEEEEEE))
+    }
+}
+
+@Composable
+private fun LinhaTabela(
+    textos: List<String>,
+    cabecalho: Boolean = false,
+    negrito: Boolean = false,
+    destaque: Boolean = false,
+    cores: List<Color>? = null,
+    pesos: List<Float>? = null,
+) {
+    val fundo = when {
+        cabecalho -> Color(0xFFE8ECF4)
+        negrito -> Color(0xFFF1F4FA)
+        destaque -> Color(0xFFFFF8E1)
+        else -> Color.White
+    }
+    Row(
+        Modifier.fillMaxWidth().background(fundo).padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        textos.forEachIndexed { i, t ->
+            Text(
+                t,
+                modifier = Modifier.weight(pesos?.getOrNull(i) ?: if (i == 0) 1.1f else 1f),
+                textAlign = if (i == 0) TextAlign.Start else TextAlign.End,
+                fontWeight = if (cabecalho || negrito) FontWeight.Bold else FontWeight.Normal,
+                color = if (cabecalho) Azul else cores?.getOrNull(i) ?: Color.Black,
+                style = if (cabecalho) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
