@@ -22,11 +22,14 @@ jobs:
       - name: Montar app
         run: gradle :desktop:createDistributable --no-daemon
       - name: Abrir app e capturar telas
-        timeout-minutes: 6
+        timeout-minutes: 12
         run: |
           set -x
           exec 2>>capturas.log
-          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb xdotool imagemagick >/dev/null
+          export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
+          sudo rm -f /var/lib/man-db/auto-update
+          timeout 240 sudo -E apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-confold xvfb xdotool imagemagick >/dev/null \
+            || (timeout 120 sudo -E apt-get update -qq && timeout 240 sudo -E apt-get install -y -qq --no-install-recommends xvfb xdotool imagemagick >/dev/null)
           mkdir -p "$HOME/ControleCaixa" capturas
           cp .github/teste/dados.json "$HOME/ControleCaixa/dados.json"
           Xvfb :99 -screen 0 1400x900x24 & sleep 3
