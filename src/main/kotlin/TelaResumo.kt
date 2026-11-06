@@ -24,6 +24,7 @@ fun TelaResumo(dados: Dados) {
     var ano by remember { mutableStateOf(LocalDate.now().year) }
     val calc = remember(dados) { Calculo(dados) }
     val hoje = YearMonth.now()
+    val inicio = YearMonth.from(LocalDate.parse(dados.dataSaldoInicial))
 
     val linhas = remember(dados, ano) {
         (1..12).map { m ->
@@ -33,7 +34,7 @@ fun TelaResumo(dados: Dados) {
                 mes = ym,
                 entradas = doMes.filter { it.entrada }.sumOf { it.centavos },
                 saidas = doMes.filter { !it.entrada }.sumOf { it.centavos },
-                saldoFim = if (ym.isAfter(hoje) && doMes.isEmpty()) null else calc.saldoAte(ym.atEndOfMonth()),
+                saldoFim = if ((ym.isAfter(hoje) || ym.isBefore(inicio)) && doMes.isEmpty()) null else calc.saldoAte(ym.atEndOfMonth()),
             )
         }
     }

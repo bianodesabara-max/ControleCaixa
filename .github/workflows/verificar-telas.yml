@@ -37,7 +37,7 @@ jobs:
           import -window root capturas/5-nova-entrada.png
           xdotool key Escape; sleep 2
           n=2
-          for par in "232 resumo" "304 conferencia" "376 categorias"; do
+          for par in "232 resumo" "304 conferencia"; do
             set -- $par
             xdotool mousemove $((X + 56)) $((Y + $1)) click 1; sleep 3
             import -window root capturas/$n-$2.png

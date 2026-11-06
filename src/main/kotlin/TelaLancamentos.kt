@@ -21,10 +21,10 @@ import java.time.YearMonth
 
 // Larguras relativas das colunas da tabela
 private val LARGURA_DATA = 104.dp
-private const val C_DESC = 2.2f
-private const val C_CAT = 2.0f
-private const val C_VALOR = 1.1f
-private const val C_SALDO = 1.2f
+private const val C_DESC = 1.9f
+private const val C_CAT = 1.7f
+private const val C_VALOR = 1.3f
+private const val C_SALDO = 1.4f
 private const val C_RESP = 1.1f
 private val LARGURA_ACOES = 96.dp
 
@@ -245,10 +245,10 @@ private fun LinhaLancamento(l: Lancamento, saldo: Long, onEditar: () -> Unit, on
             }
         }
         Text(l.categoria, Modifier.weight(C_CAT).padding(end = 8.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(if (l.entrada) moeda(l.centavos) else "", Modifier.weight(C_VALOR).padding(start = 8.dp), color = Verde, textAlign = TextAlign.End)
-        Text(if (!l.entrada) moeda(l.centavos) else "", Modifier.weight(C_VALOR).padding(start = 8.dp), color = Vermelho, textAlign = TextAlign.End)
+        Text(if (l.entrada) moeda(l.centavos) else "", Modifier.weight(C_VALOR).padding(start = 8.dp), color = Verde, textAlign = TextAlign.End, maxLines = 1, softWrap = false)
+        Text(if (!l.entrada) moeda(l.centavos) else "", Modifier.weight(C_VALOR).padding(start = 8.dp), color = Vermelho, textAlign = TextAlign.End, maxLines = 1, softWrap = false)
         Text(
-            moeda(saldo), Modifier.weight(C_SALDO).padding(start = 8.dp), textAlign = TextAlign.End, fontWeight = FontWeight.SemiBold,
+            moeda(saldo), Modifier.weight(C_SALDO).padding(start = 8.dp), textAlign = TextAlign.End, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false,
             color = if (saldo < 0) Vermelho else Color.Black,
         )
         Spacer(Modifier.width(16.dp))
