@@ -42,22 +42,50 @@ fun TelaResumo(dados: Dados) {
     val totalEntradas = linhas.sumOf { it.entradas }
     val totalSaidas = linhas.sumOf { it.saidas }
 
-    Column(Modifier.fillMaxSize()) {
+    val compacto = LocalCompacto.current
+    val cabecalho: @Composable () -> Unit = {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Titulo("Resumo Mensal")
+            Titulo(if (compacto) "Resumo" else "Resumo Mensal")
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { ano-- }) { Icon(Icons.Filled.ChevronLeft, "Ano anterior", tint = Azul) }
             Text("$ano", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Azul)
             IconButton(onClick = { ano++ }) { Icon(Icons.Filled.ChevronRight, "Próximo ano", tint = Azul) }
         }
+    }
+    val corResultado = if (totalEntradas - totalSaidas < 0) Vermelho else Azul
+
+    if (compacto) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            cabecalho()
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CartaoValor("Entradas em $ano", moeda(totalEntradas), Verde, Modifier.weight(1f).fillMaxHeight())
+                CartaoValor("Saídas em $ano", moeda(totalSaidas), Vermelho, Modifier.weight(1f).fillMaxHeight())
+            }
+            CartaoValor("Resultado do ano", moeda(totalEntradas - totalSaidas), corResultado, Modifier.fillMaxWidth())
+            CartaoBranco(Modifier.fillMaxWidth()) {
+                linhas.forEachIndexed { i, l ->
+                    if (i > 0) HorizontalDivider(color = Color(0xFFEEEEEE))
+                    MesCompacto(l, destaque = l.mes == hoje)
+                }
+            }
+            CartaoBranco(Modifier.fillMaxWidth()) {
+                TotaisPorCategoria("Entradas por categoria", dados.categoriasEntrada, doAno.filter { it.entrada }, Verde)
+            }
+            CartaoBranco(Modifier.fillMaxWidth()) {
+                TotaisPorCategoria("Saídas por categoria", dados.categoriasSaida, doAno.filter { !it.entrada }, Vermelho)
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        return
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        cabecalho()
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CartaoValor("Entradas em $ano", moeda(totalEntradas), Verde, Modifier.weight(1f))
             CartaoValor("Saídas em $ano", moeda(totalSaidas), Vermelho, Modifier.weight(1f))
-            CartaoValor(
-                "Resultado do ano", moeda(totalEntradas - totalSaidas),
-                if (totalEntradas - totalSaidas < 0) Vermelho else Azul, Modifier.weight(1f),
-            )
+            CartaoValor("Resultado do ano", moeda(totalEntradas - totalSaidas), corResultado, Modifier.weight(1f))
         }
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -96,6 +124,39 @@ fun TelaResumo(dados: Dados) {
                     TotaisPorCategoria("Saídas por categoria", dados.categoriasSaida, doAno.filter { !it.entrada }, Vermelho)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MesCompacto(l: LinhaMes, destaque: Boolean) {
+    val temMovimento = l.entradas != 0L || l.saidas != 0L
+    Column(
+        Modifier.fillMaxWidth().background(if (destaque) Color(0xFFFFF8E1) else Color.White)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(NOMES_MESES[l.mes.monthValue - 1], fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            l.saldoFim?.let {
+                Text(
+                    "Saldo ${moeda(it)}", style = MaterialTheme.typography.bodyMedium,
+                    color = if (it < 0) Vermelho else Color.Black, maxLines = 1, softWrap = false,
+                )
+            }
+        }
+        if (temMovimento) {
+            Row {
+                Text("+ ${moeda(l.entradas)}", color = Verde, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.width(10.dp))
+                Text("− ${moeda(l.saidas)}", color = Vermelho, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "= ${moeda(l.resultado)}", style = MaterialTheme.typography.bodySmall,
+                    color = if (l.resultado < 0) Vermelho else Cinza,
+                )
+            }
+        } else {
+            Text("sem movimento", style = MaterialTheme.typography.bodySmall, color = Cinza)
         }
     }
 }

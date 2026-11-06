@@ -17,9 +17,9 @@ jobs:
         with:
           gradle-version: '8.11.1'
       - name: Gerar instalador (.exe)
-        run: gradle packageExe --no-daemon --stacktrace
+        run: gradle :desktop:packageExe --no-daemon --stacktrace
       - uses: actions/upload-artifact@v7
         with:
           name: ControleCaixa-instalador
-          path: build/compose/binaries/main/exe/*.exe
+          path: desktop/build/compose/binaries/main/exe/*.exe
           if-no-files-found: error

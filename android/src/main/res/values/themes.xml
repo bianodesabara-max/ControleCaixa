@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="fundo">#FFF3F5F9</color>
+    <color name="icone_fundo">#FF1F3864</color>
+
+    <style name="Theme.ControleCaixa" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/fundo</item>
+    </style>
+</resources>

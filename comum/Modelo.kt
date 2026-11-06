@@ -106,8 +106,8 @@ class Calculo(val dados: Dados) {
 }
 
 object Armazenamento {
-    val pasta: File = File(System.getenv("APPDATA") ?: System.getProperty("user.home"), "ControleCaixa")
-    private val arquivo = File(pasta, "dados.json")
+    val pasta: File by lazy { pastaDeDados() }
+    private val arquivo by lazy { File(pasta, "dados.json") }
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true; encodeDefaults = true }
 
     /** Mensagem a mostrar quando o arquivo de dados não pôde ser lido. */
@@ -153,7 +153,12 @@ val NOMES_MESES = listOf(
 fun dataBR(d: LocalDate): String = d.format(formatoData)
 fun dataBR(iso: String): String = runCatching { dataBR(LocalDate.parse(iso)) }.getOrDefault(iso)
 
-fun lerData(texto: String): LocalDate? = runCatching { LocalDate.parse(texto.trim(), leituraData) }.getOrNull()
+fun lerData(texto: String): LocalDate? {
+    val t = texto.trim()
+    // Aceita também só os números: 06112026 = 06/11/2026
+    val comBarras = if (Regex("""\d{8}""").matches(t)) "${t.substring(0, 2)}/${t.substring(2, 4)}/${t.substring(4)}" else t
+    return runCatching { LocalDate.parse(comBarras, leituraData) }.getOrNull()
+}
 
 fun nomeMes(m: YearMonth): String = "${NOMES_MESES[m.monthValue - 1]}/${m.year}"
 

@@ -2,6 +2,7 @@ package caixa
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -15,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.YearMonth
@@ -29,7 +31,13 @@ private const val C_RESP = 1.1f
 private val LARGURA_ACOES = 96.dp
 
 @Composable
-fun TelaLancamentos(dados: Dados, atualizar: ((Dados) -> Dados) -> Unit, avisar: (String) -> Unit) {
+fun TelaLancamentos(
+    dados: Dados,
+    atualizar: ((Dados) -> Dados) -> Unit,
+    avisar: (String) -> Unit,
+    exportar: (String, String) -> Unit,
+) {
+    val compacto = LocalCompacto.current
     val calc = remember(dados) { Calculo(dados) }
     var novoEhEntrada by remember { mutableStateOf<Boolean?>(null) }
     var editando by remember { mutableStateOf<Lancamento?>(null) }
@@ -51,111 +59,149 @@ fun TelaLancamentos(dados: Dados, atualizar: ((Dados) -> Dados) -> Unit, avisar:
     val entradasPeriodo = filtrados.filter { it.entrada }.sumOf { it.centavos }
     val saidasPeriodo = filtrados.filter { !it.entrada }.sumOf { it.centavos }
     val sufixo = periodo?.let { " em ${nomeMes(it)}" } ?: " (todos)"
+    val acaoExportar: () -> Unit = { exportar("controle-de-caixa-${LocalDate.now()}.csv", gerarCsv(dados)) }
+    val textoVazio = if (dados.lancamentos.isEmpty()) "Nenhum lançamento ainda. Use \"Nova entrada\" ou \"Nova saída\"."
+    else "Nenhum lançamento neste período ou busca."
 
-    Column(Modifier.fillMaxSize()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Titulo("Lançamentos")
-            Spacer(Modifier.weight(1f))
-            Button(
-                onClick = { novoEhEntrada = true },
-                colors = ButtonDefaults.buttonColors(containerColor = Verde),
-            ) {
-                Icon(Icons.Filled.Add, null)
-                Spacer(Modifier.width(6.dp))
-                Text("Nova entrada")
-            }
-            Spacer(Modifier.width(8.dp))
-            Button(
-                onClick = { novoEhEntrada = false },
-                colors = ButtonDefaults.buttonColors(containerColor = Vermelho),
-            ) {
-                Icon(Icons.Filled.Remove, null)
-                Spacer(Modifier.width(6.dp))
-                Text("Nova saída")
-            }
-            Spacer(Modifier.width(8.dp))
-            OutlinedButton(onClick = {
-                try {
-                    val arquivo = exportarParaExcel(dados)
-                    if (arquivo != null) avisar("Planilha salva em ${arquivo.absolutePath}")
-                } catch (e: Exception) {
-                    avisar("Não foi possível salvar a planilha: ${e.message}")
+    val cartaoSaldoInicial: @Composable (Modifier) -> Unit = { m ->
+        CartaoValor(
+            "Saldo inicial", moeda(dados.saldoInicialCentavos), Azul,
+            m.clickable { editarSaldoInicial = true },
+            detalhe = "em ${dataBR(dados.dataSaldoInicial)} · " + if (compacto) "toque para alterar" else "clique para alterar",
+        )
+    }
+    val cartaoSaldoAtual: @Composable (Modifier) -> Unit = { m ->
+        CartaoValor(
+            "Saldo atual do caixa", moeda(calc.saldoAtual),
+            if (calc.saldoAtual < 0) Vermelho else Azul, m,
+            detalhe = "${dados.lancamentos.size} lançamento(s)",
+        )
+    }
+    val seletorPeriodo: @Composable (Modifier) -> Unit = { m ->
+        Seletor(
+            rotulo = "Período",
+            texto = periodo?.let { nomeMes(it) } ?: "Todos os lançamentos",
+            opcoes = listOf("Todos os lançamentos") + meses.map { nomeMes(it) },
+            onEscolher = { i -> periodo = if (i == 0) null else meses[i - 1] },
+            modifier = m,
+        )
+    }
+    val campoBusca: @Composable (Modifier) -> Unit = { m ->
+        OutlinedTextField(
+            value = busca,
+            onValueChange = { busca = it },
+            placeholder = { Text("Buscar lançamentos", maxLines = 1) },
+            leadingIcon = { Icon(Icons.Filled.Search, null) },
+            trailingIcon = {
+                if (busca.isNotEmpty()) IconButton(onClick = { busca = "" }) { Icon(Icons.Filled.Close, "Limpar") }
+            },
+            singleLine = true,
+            modifier = m,
+        )
+    }
+
+    if (compacto) {
+        // ----- Celular: tudo numa lista só, que rola inteira -----
+        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Titulo("Lançamentos")
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = acaoExportar) {
+                        Icon(Icons.Filled.FileDownload, "Exportar para Excel", tint = Azul)
+                    }
                 }
-            }) {
-                Icon(Icons.Filled.FileDownload, null)
-                Spacer(Modifier.width(6.dp))
-                Text("Exportar para Excel")
             }
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CartaoValor(
-                "Saldo inicial", moeda(dados.saldoInicialCentavos), Azul,
-                Modifier.weight(1f).clickable { editarSaldoInicial = true },
-                detalhe = "em ${dataBR(dados.dataSaldoInicial)} · clique para alterar",
-            )
-            CartaoValor("Entradas$sufixo", moeda(entradasPeriodo), Verde, Modifier.weight(1f))
-            CartaoValor("Saídas$sufixo", moeda(saidasPeriodo), Vermelho, Modifier.weight(1f))
-            CartaoValor(
-                "Saldo atual do caixa", moeda(calc.saldoAtual),
-                if (calc.saldoAtual < 0) Vermelho else Azul, Modifier.weight(1f),
-                detalhe = "${dados.lancamentos.size} lançamento(s) no total",
-            )
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Seletor(
-                rotulo = "Período",
-                texto = periodo?.let { nomeMes(it) } ?: "Todos os lançamentos",
-                opcoes = listOf("Todos os lançamentos") + meses.map { nomeMes(it) },
-                onEscolher = { i -> periodo = if (i == 0) null else meses[i - 1] },
-                modifier = Modifier.width(260.dp),
-            )
-            Spacer(Modifier.width(12.dp))
-            OutlinedTextField(
-                value = busca,
-                onValueChange = { busca = it },
-                placeholder = { Text("Buscar lançamentos", maxLines = 1) },
-                leadingIcon = { Icon(Icons.Filled.Search, null) },
-                trailingIcon = {
-                    if (busca.isNotEmpty()) IconButton(onClick = { busca = "" }) { Icon(Icons.Filled.Close, "Limpar") }
-                },
-                singleLine = true,
-                modifier = Modifier.width(440.dp),
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-        CartaoBranco(Modifier.fillMaxSize()) {
-            CabecalhoLancamentos()
-            HorizontalDivider()
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BotaoNovo(true, Modifier.weight(1f)) { novoEhEntrada = true }
+                    BotaoNovo(false, Modifier.weight(1f)) { novoEhEntrada = false }
+                }
+            }
+            item {
+                Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    cartaoSaldoAtual(Modifier.weight(1f).fillMaxHeight())
+                    cartaoSaldoInicial(Modifier.weight(1f).fillMaxHeight())
+                }
+            }
+            item {
+                Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CartaoValor("Entradas$sufixo", moeda(entradasPeriodo), Verde, Modifier.weight(1f).fillMaxHeight())
+                    CartaoValor("Saídas$sufixo", moeda(saidasPeriodo), Vermelho, Modifier.weight(1f).fillMaxHeight())
+                }
+            }
+            item { seletorPeriodo(Modifier.fillMaxWidth()) }
+            item { campoBusca(Modifier.fillMaxWidth()) }
             if (filtrados.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (dados.lancamentos.isEmpty()) "Nenhum lançamento ainda. Use \"Nova entrada\" ou \"Nova saída\"."
-                        else "Nenhum lançamento neste período ou busca.",
-                        color = Cinza,
-                    )
+                item {
+                    Text(textoVazio, color = Cinza, modifier = Modifier.fillMaxWidth().padding(24.dp), textAlign = TextAlign.Center)
                 }
             } else {
-                val lista = rememberLazyListState()
-                Box(Modifier.fillMaxSize()) {
-                    LazyColumn(state = lista, modifier = Modifier.fillMaxSize().padding(end = 12.dp)) {
-                        items(filtrados, key = { it.id }) { l ->
-                            LinhaLancamento(
-                                l, calc.saldoApos[l.id] ?: 0L,
-                                onEditar = { editando = l },
-                                onExcluir = { excluindo = l },
-                            )
-                            HorizontalDivider(color = Color(0xFFEEEEEE))
-                        }
-                    }
-                    VerticalScrollbar(
-                        adapter = rememberScrollbarAdapter(lista),
-                        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                items(filtrados, key = { it.id }) { l ->
+                    ItemLancamentoCompacto(
+                        l, calc.saldoApos[l.id] ?: 0L,
+                        onEditar = { editando = l },
+                        onExcluir = { excluindo = l },
                     )
+                }
+            }
+            item { Spacer(Modifier.height(8.dp)) }
+        }
+    } else {
+        // ----- Computador: tabela -----
+        Column(Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Titulo("Lançamentos")
+                Spacer(Modifier.weight(1f))
+                BotaoNovo(true) { novoEhEntrada = true }
+                Spacer(Modifier.width(8.dp))
+                BotaoNovo(false) { novoEhEntrada = false }
+                Spacer(Modifier.width(8.dp))
+                OutlinedButton(onClick = acaoExportar) {
+                    Icon(Icons.Filled.FileDownload, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Exportar para Excel")
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                cartaoSaldoInicial(Modifier.weight(1f).fillMaxHeight())
+                CartaoValor("Entradas$sufixo", moeda(entradasPeriodo), Verde, Modifier.weight(1f).fillMaxHeight())
+                CartaoValor("Saídas$sufixo", moeda(saidasPeriodo), Vermelho, Modifier.weight(1f).fillMaxHeight())
+                cartaoSaldoAtual(Modifier.weight(1f).fillMaxHeight())
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                seletorPeriodo(Modifier.width(260.dp))
+                Spacer(Modifier.width(12.dp))
+                campoBusca(Modifier.width(440.dp))
+            }
+
+            Spacer(Modifier.height(12.dp))
+            CartaoBranco(Modifier.fillMaxSize()) {
+                CabecalhoLancamentos()
+                HorizontalDivider()
+                if (filtrados.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(textoVazio, color = Cinza)
+                    }
+                } else {
+                    val lista = rememberLazyListState()
+                    Box(Modifier.fillMaxSize()) {
+                        LazyColumn(state = lista, modifier = Modifier.fillMaxSize().padding(end = 12.dp)) {
+                            items(filtrados, key = { it.id }) { l ->
+                                LinhaLancamento(
+                                    l, calc.saldoApos[l.id] ?: 0L,
+                                    onEditar = { editando = l },
+                                    onExcluir = { excluindo = l },
+                                )
+                                HorizontalDivider(color = Color(0xFFEEEEEE))
+                            }
+                        }
+                        BarraRolagem(lista, Modifier.align(Alignment.CenterEnd).fillMaxHeight())
+                    }
                 }
             }
         }
@@ -209,6 +255,56 @@ fun TelaLancamentos(dados: Dados, atualizar: ((Dados) -> Dados) -> Unit, avisar:
             },
             onCancelar = { editarSaldoInicial = false },
         )
+    }
+}
+
+@Composable
+private fun BotaoNovo(entrada: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(containerColor = if (entrada) Verde else Vermelho),
+    ) {
+        Icon(if (entrada) Icons.Filled.Add else Icons.Filled.Remove, null)
+        Spacer(Modifier.width(6.dp))
+        Text(if (entrada) "Nova entrada" else "Nova saída", maxLines = 1)
+    }
+}
+
+@Composable
+private fun ItemLancamentoCompacto(l: Lancamento, saldo: Long, onEditar: () -> Unit, onExcluir: () -> Unit) {
+    CartaoBranco(Modifier.fillMaxWidth().clickable(onClick = onEditar)) {
+        Row(Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(l.descricao, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "${dataBR(l.dataLocal)} · ${l.categoria}",
+                    style = MaterialTheme.typography.bodySmall, color = Cinza,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                if (l.observacao.isNotBlank() || l.responsavel.isNotBlank()) {
+                    Text(
+                        listOf(l.responsavel, l.observacao).filter { it.isNotBlank() }.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall, color = Cinza,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    (if (l.entrada) "+ " else "− ") + moeda(l.centavos),
+                    color = if (l.entrada) Verde else Vermelho, fontWeight = FontWeight.Bold,
+                    maxLines = 1, softWrap = false,
+                )
+                Text(
+                    "Saldo ${moeda(saldo)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (saldo < 0) Vermelho else Cinza, maxLines = 1, softWrap = false,
+                )
+            }
+            IconButton(onClick = onExcluir) { Icon(Icons.Filled.Delete, "Excluir", tint = Cinza) }
+        }
     }
 }
 
@@ -296,7 +392,7 @@ fun DialogoLancamento(
         },
         text = {
             Column(
-                Modifier.width(520.dp).verticalScroll(rememberScrollState()),
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -331,6 +427,7 @@ fun DialogoLancamento(
                     OutlinedTextField(
                         value = valorTxt, onValueChange = { valorTxt = it },
                         label = { Text("Valor (R$)") }, placeholder = { Text("0,00") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         isError = tentou && !valorOk,
                         singleLine = true, modifier = Modifier.weight(1f),
                     )
@@ -399,7 +496,7 @@ private fun DialogoSaldoInicial(dados: Dados, onSalvar: (Long, LocalDate) -> Uni
         onDismissRequest = onCancelar,
         title = { Text("Saldo inicial do caixa") },
         text = {
-            Column(Modifier.width(420.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Dinheiro que já estava no caixa antes do primeiro lançamento.", color = Cinza)
                 OutlinedTextField(
                     value = valorTxt, onValueChange = { valorTxt = it },

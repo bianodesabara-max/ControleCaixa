@@ -14,24 +14,38 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun TelaCategorias(dados: Dados, atualizar: ((Dados) -> Dados) -> Unit, avisar: (String) -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        Titulo("Categorias")
-        Text(
-            "Ao renomear, os lançamentos já feitos com essa categoria também são atualizados.",
-            color = Cinza,
+    val compacto = LocalCompacto.current
+    val listaEntrada: @Composable (Modifier) -> Unit = { m ->
+        ListaCategorias(
+            titulo = "Categorias de entrada", cor = Verde, ehEntrada = true,
+            dados = dados, atualizar = atualizar, avisar = avisar, modifier = m, rolavel = !compacto,
         )
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            ListaCategorias(
-                titulo = "Categorias de entrada", cor = Verde, ehEntrada = true,
-                dados = dados, atualizar = atualizar, avisar = avisar,
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-            )
-            ListaCategorias(
-                titulo = "Categorias de saída", cor = Vermelho, ehEntrada = false,
-                dados = dados, atualizar = atualizar, avisar = avisar,
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-            )
+    }
+    val listaSaida: @Composable (Modifier) -> Unit = { m ->
+        ListaCategorias(
+            titulo = "Categorias de saída", cor = Vermelho, ehEntrada = false,
+            dados = dados, atualizar = atualizar, avisar = avisar, modifier = m, rolavel = !compacto,
+        )
+    }
+    val aviso = "Ao renomear, os lançamentos já feitos com essa categoria também são atualizados."
+
+    if (compacto) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Titulo("Categorias")
+            Text(aviso, color = Cinza)
+            listaEntrada(Modifier.fillMaxWidth())
+            listaSaida(Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
+        }
+    } else {
+        Column(Modifier.fillMaxSize()) {
+            Titulo("Categorias")
+            Text(aviso, color = Cinza)
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                listaEntrada(Modifier.weight(1f).fillMaxHeight())
+                listaSaida(Modifier.weight(1f).fillMaxHeight())
+            }
         }
     }
 }
@@ -50,6 +64,7 @@ private fun ListaCategorias(
     atualizar: ((Dados) -> Dados) -> Unit,
     avisar: (String) -> Unit,
     modifier: Modifier,
+    rolavel: Boolean,
 ) {
     val lista = dados.categorias(ehEntrada)
     var nova by remember { mutableStateOf("") }
@@ -82,11 +97,11 @@ private fun ListaCategorias(
                 }) {
                     Icon(Icons.Filled.Add, null)
                     Spacer(Modifier.width(4.dp))
-                    Text("Adicionar")
+                    Text("Adicionar", maxLines = 1)
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            Column(if (rolavel) Modifier.verticalScroll(rememberScrollState()) else Modifier) {
                 lista.forEach { c ->
                     val usos = dados.lancamentos.count { it.entrada == ehEntrada && it.categoria == c }
                     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -114,7 +129,7 @@ private fun ListaCategorias(
             text = {
                 OutlinedTextField(
                     value = texto, onValueChange = { texto = it },
-                    label = { Text("Nome") }, singleLine = true, modifier = Modifier.width(420.dp),
+                    label = { Text("Nome") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                 )
             },
             confirmButton = {
